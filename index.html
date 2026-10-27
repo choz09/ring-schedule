@@ -92,7 +92,7 @@ input[type=range]{width:100%;accent-color:var(--gold)}
       <label for="bgX">X用の背景画像（4:5）。未選択ならストーリー用の中央を切り出します</label>
       <input id="bgX" type="file" accept="image/*">
     </div>
-    <div class="note">一度選べば端末に記憶されます。</div>
+    <div class="note">一度選べば端末に記憶されます。保存ボタンを押すと共有画面が開くので、「画像を保存」を選ぶと写真に入ります。</div>
   </div>
 
   <div class="btns">
@@ -213,7 +213,25 @@ input[type=range]{width:100%;accent-color:var(--gold)}
       cv.style.aspectRatio='1080 / '+H[mode];
       ctx.clearRect(0,0,1080,H[mode]);
       drawBase(ctx,mode); drawText(ctx,mode);
+      warm();
     });
+  }
+
+  // スマホの共有シート(「画像を保存」で写真に入る)は、押した直後でないと開けないため、
+  // 内容が変わるたびに先にPNGを作って用意しておく
+  var cache={s:null,x:null}, warmTimer=null, warmVer=0;
+  function warm(){
+    cache={s:null,x:null}; var v=++warmVer; clearTimeout(warmTimer);
+    warmTimer=setTimeout(function(){
+      ['s','x'].forEach(function(m){
+        exportBlob(m).then(function(b){
+          if(b&&v===warmVer){ try{ cache[m]=new File([b],'ring-'+(m==='x'?'4x5':'story')+'.png',{type:'image/png'}); }catch(e){} }
+        });
+      });
+    },400);
+  }
+  function canShareFile(f){
+    try{ return !!(f&&navigator.canShare&&navigator.share&&window.matchMedia('(pointer:coarse)').matches&&navigator.canShare({files:[f]})); }catch(e){ return false; }
   }
 
   function exportBlob(m){
@@ -226,6 +244,14 @@ input[type=range]{width:100%;accent-color:var(--gold)}
   }
 
   function save(m,btn){
+    var f=cache[m];
+    if(canShareFile(f)){
+      showFallback(f);
+      navigator.share({files:[f]}).then(function(){ flash(btn,'完了しました'); setMsg('「画像を保存」を選ぶと、写真に入ります。'); },function(e){
+        if(e&&e.name==='AbortError'){ setMsg('キャンセルしました。'); } else { setMsg('開けませんでした。下の画像を長押しして保存してください。'); }
+      });
+      return;
+    }
     setMsg('画像を作っています…');
     exportBlob(m).then(function(blob){
       if(!blob){ setMsg('画像を作れませんでした。もう一度お試しください。'); return; }
