@@ -123,7 +123,7 @@ input[type=range]{width:100%;accent-color:var(--gold)}
 
   function loadSrc(m,src){ var im=new Image(); im.onload=function(){bg[m]=im;draw();}; im.src=src; }
   function timeText(){ return $('time').value||'19:00'; }
-  function timeFull(){ return timeText().replace(':','：'); }
+  function timeFull(){ return timeText(); }
   function setMsg(s){ $('msg').textContent=s; }
 
   // 押したあと、ボタンの文字を一時的に「✓ ○○しました」に変えて完了を知らせる
