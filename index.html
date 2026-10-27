@@ -33,6 +33,16 @@ input[type=range]{width:100%;accent-color:var(--gold)}
 .btn{font:inherit;font-size:16px;font-weight:700;padding:14px;border-radius:10px;border:1px solid var(--line);background:#10131b;color:var(--fg);cursor:pointer}
 .btn.main{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
 .btn:focus-visible,.stepper button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+/* 押した感: 押している間だけ沈み、影が縮む。離すと戻る */
+.btn,.stepper button,.tab{-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .08s ease-out,box-shadow .08s ease-out,background-color .2s,color .2s,border-color .2s}
+.btn{box-shadow:0 4px 0 #05060a}
+.btn.main{box-shadow:0 4px 0 #8a6d33}
+.stepper button{box-shadow:0 3px 0 #05060a}
+.tab{box-shadow:0 3px 0 #05060a}
+.btn:active,.stepper button:active,.tab:active{transform:translateY(3px);box-shadow:0 1px 0 #05060a}
+.btn.main:active{box-shadow:0 1px 0 #8a6d33}
+.btn.done{background:#e8dcc0;color:var(--gold-ink);border-color:#e8dcc0}
+@media (prefers-reduced-motion:reduce){.btn,.stepper button,.tab{transition:none}}
 .msg{font-size:13px;color:var(--muted);min-height:1.4em}
 .file{display:flex;flex-direction:column;gap:6px}
 .file input{font:inherit;font-size:13px;color:var(--muted)}
@@ -115,6 +125,14 @@ input[type=range]{width:100%;accent-color:var(--gold)}
   function timeText(){ return $('time').value||'19:00'; }
   function timeFull(){ return timeText().replace(':','：'); }
   function setMsg(s){ $('msg').textContent=s; }
+
+  // 押したあと、ボタンの文字を一時的に「✓ ○○しました」に変えて完了を知らせる
+  function flash(btn,text){
+    if(!btn) return;
+    if(btn._t){ clearTimeout(btn._t); } else { btn._label=btn.textContent; }
+    btn.textContent='✓ '+text; btn.classList.add('done');
+    btn._t=setTimeout(function(){ btn.textContent=btn._label; btn.classList.remove('done'); btn._t=null; },2000);
+  }
 
   function ensureFonts(){
     if(!document.fonts||!document.fonts.load) return Promise.resolve();
@@ -207,13 +225,13 @@ input[type=range]{width:100%;accent-color:var(--gold)}
     });
   }
 
-  function save(m){
+  function save(m,btn){
     setMsg('画像を作っています…');
     exportBlob(m).then(function(blob){
       if(!blob){ setMsg('画像を作れませんでした。もう一度お試しください。'); return; }
       showFallback(blob);
       var name='ring-'+(m==='x'?'4x5':'story')+'.png';
-      try{ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setMsg('保存しました。保存されないときは、下の画像を長押しして保存してください。'); }catch(e){ setMsg('下の画像を長押しして保存してください。'); }
+      try{ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); flash(btn,'保存しました'); setMsg('保存しました。保存されないときは、下の画像を長押しして保存してください。'); }catch(e){ setMsg('下の画像を長押しして保存してください。'); }
     });
   }
 
@@ -245,11 +263,11 @@ input[type=range]{width:100%;accent-color:var(--gold)}
   $('minus').onclick=function(){ count=Math.max(0,count-1); refreshCount(); persist(); draw(); };
   $('time').addEventListener('input',function(){ persist(); draw(); });
   $('ypos').addEventListener('input',function(){ ypos[mode]=+$('ypos').value; persist(); draw(); });
-  $('saveStory').onclick=function(){ save('s'); };
-  $('saveX').onclick=function(){ save('x'); };
+  $('saveStory').onclick=function(){ save('s',this); };
+  $('saveX').onclick=function(){ save('x',this); };
   $('copy').onclick=function(){
     var t=postText();
-    var done=function(){ setMsg('投稿文をコピーしました。'); };
+    var done=function(){ flash($('copy'),'コピーしました'); setMsg('投稿文をコピーしました。'); };
     var fail=function(){ setMsg('コピーできませんでした。\n'+t); };
     try{ navigator.clipboard.writeText(t).then(done,fail); }catch(e){ fail(); }
   };
